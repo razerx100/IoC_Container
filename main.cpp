@@ -4,6 +4,10 @@
 
 class X {
 public:
+    ~X() {
+        std::cout << "Xout\n";
+    }
+
     int GetZ() const noexcept {
         return z;
     }
@@ -18,8 +22,24 @@ private:
 
 class Z {
 public:
+    Z() {
+        std::cout << "Ctor?\n";
+    }
+    ~Z() {
+        std::cout << "Good bye\n";
+    }
+
+    void Init() {
+        m_name = "Sora";
+        std::cout << m_name << " " << m_x.GetA() << "\n";
+    }
+
     X m_x;
     std::string m_name;
+};
+
+struct A {
+    Z z;
 };
 
 int main() {
@@ -28,13 +48,19 @@ int main() {
         xContainer.RegisterArguments(55);
         xContainer.RegisterArguments(9.9f, 4u);
 
+        X x = xContainer.Resolve();
+        X y = xContainer.Resolve();
+
         IoC<Z> zContainer;
-        zContainer.RegisterArguments(xContainer.ResolvePtr());
+        zContainer.RegisterArguments(xContainer.Resolve());
         zContainer.RegisterArguments(std::string("Terry"), sizeof(X));
+        zContainer.RegisterInitFunction(&Z::Init);
 
         Z z = zContainer.Resolve();
+        Z a = zContainer.Resolve();
 
-        std::cout << z.m_name << " " << z.m_x.GetA();
+        IoC<A> aContainer;
+        aContainer.RegisterArguments(zContainer.Resolve());
     }
     catch (std::exception& e) {
         std::cout << e.what();

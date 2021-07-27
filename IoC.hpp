@@ -6,34 +6,39 @@
 template<typename T>
 class IoC {
 public:
-    IoC() {
-        m_pData = std::unique_ptr<std::uint8_t>(new std::uint8_t[sizeof(T)]);
+    IoC() : m_initFunc(nullptr) {
+        m_pInstance = std::unique_ptr<T>(
+            reinterpret_cast<T*>(new std::uint8_t[sizeof(T)])
+            );
     }
-    virtual ~IoC() = default;
 
-    template<typename U>
-    void RegisterArguments(U* arg, std::uint64_t offSet = 0u)
-        noexcept {
-        memcpy(m_pData.get() + offSet, arg, sizeof(U));
-    }
-    
     template<typename U>
     void RegisterArguments(const U& arg, std::uint64_t offSet = 0u)
         noexcept {
-        memcpy(m_pData.get() + offSet, &arg, sizeof(U));
+        *reinterpret_cast<U*>(
+            reinterpret_cast<std::uint8_t*>(m_pInstance.get()) + offSet) = arg;
+    }
+
+    void RegisterInitFunction(void(T::* func)()) {
+        m_initFunc = func;
     }
 
     T& Resolve() noexcept {
-        return *reinterpret_cast<T*>(m_pData.get());
+        T* ptr = m_pInstance.get();
+        if (m_initFunc)
+            (ptr->*(m_initFunc))();
+        return *ptr;
     }
 
     T* ResolvePtr() noexcept {
-        return reinterpret_cast<T*>(m_pData.get());
+        T* ptr = m_pInstance.get();
+        if (m_initFunc)
+            (ptr->*(m_initFunc))();
+        return ptr;
     }
 
-    void Release() noexcept {}
-
 protected:
-    std::unique_ptr<std::uint8_t> m_pData;
+    std::unique_ptr<T> m_pInstance;
+    void(T::* m_initFunc)();
 };
 #endif
